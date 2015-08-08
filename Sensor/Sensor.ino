@@ -46,7 +46,7 @@ void setup() {
 }
 
 void loop() {
-  packet = createHttpPacket();
+  packet = create_http_packet();
   process.runShellCommand(packet);
 
   // Serial.print("Ro=");
@@ -63,14 +63,14 @@ void loop() {
   delay(1000);
 }
 
-String createHttpPacket() {
-  String payload = getPayload();
+String create_http_packet() {
+  String payload = get_payload();
   String packet = command + content_type + post_data_command
                   + start_payload + payload + end_payload + adress;
   return packet;
 }
 
-String getPayload() {
+String get_payload() {
   String payload = "";
 
   float carbon = get_carbonmonoxide_MQ9();
@@ -134,7 +134,6 @@ float get_temperature_LM35() {
   return temp;
 }
 
-// If only Carbon Monoxide is tested, the heater can be set at 1.5V.
 float get_carbonmonoxide_MQ9() {
   float value = mq2.MQGetGasPercentage(MQRead(analogRead(MQ2_ANALOG_PIN)) / mq2.Ro, GAS_CO);
   Serial.print("Carbon monoxide:");
