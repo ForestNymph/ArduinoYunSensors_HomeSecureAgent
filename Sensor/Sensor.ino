@@ -49,10 +49,10 @@ void loop() {
   packet = createHttpPacket();
   process.runShellCommand(packet);
 
-  Serial.print("Ro=");
-  Serial.print(mq2.Ro);
-  Serial.print(" kohm");
-  Serial.print("\n");
+  // Serial.print("Ro=");
+  // Serial.print(mq2.Ro);
+  // Serial.print(" kohm");
+  // Serial.print("\n");
 
   while (process.running());
 
@@ -74,22 +74,24 @@ String getPayload() {
   String payload = "";
 
   float carbon = get_carbonmonoxide_MQ9();
-  payload += sensorNameValueToString("carbon monoxide", carbon);
+  payload += to_string("carbon monoxide", carbon);
 
   float gas = get_gas_MQ2();
-  payload += sensorNameValueToString("gas", gas);
+  payload += to_string("gas", gas);
 
   float humidity = get_humidity_DHT11();
-  payload += sensorNameValueToString("humidity", humidity);
+  payload += to_string("humidity", humidity);
 
   float motion = get_motion_HCSR501();
-  payload += sensorNameValueToString("motion", motion);
+  payload += to_string("motion", motion);
 
   float smoke = get_smoke_MQ2();
-  payload += sensorNameValueToString("smoke", smoke);
+  payload += to_string("smoke", smoke);
 
   float temperature = get_temperature_LM35();
-  payload += sensorNameValueToString("temperature", temperature);
+  payload += to_string("temperature", temperature);
+  
+  // Serial.println(payload);
 
   return payload;
 }
@@ -122,24 +124,30 @@ float get_humidity_DHT11() {
 
 float get_temperature_LM35() {
   //convert the analog data to Celcius temperature
-  float temp = (5.0 * analogRead(LM35_ANALOG_PIN) * 100.0) / 1024.0;//temp * 0.48828125;
-  Serial.print("TEMPRATURE = ");
-  Serial.print(temp);
-  Serial.print("*C");
-  Serial.println();
+  //float temp = (5.0 * analogRead(LM35_ANALOG_PIN) * 100.0) / 1024.0;//temp * 0.48828125;
+  float temp = DHT.temperature;
+  // Serial.print("TEMPRATURE = ");
+  // Serial.print(temp);
+  // Serial.print("*C");
+  // Serial.println();
 
   return temp;
 }
 
+// If only Carbon Monoxide is tested, the heater can be set at 1.5V.
 float get_carbonmonoxide_MQ9() {
-  return 0;
+  float value = mq2.MQGetGasPercentage(MQRead(analogRead(MQ2_ANALOG_PIN)) / mq2.Ro, GAS_CO);
+  Serial.print("Carbon monoxide:");
+  Serial.print(value);
+  Serial.print(" ppm\n");
+  return value;
 }
 
 float get_gasLPG_MQ2() {
   float value = mq2.MQGetGasPercentage(MQRead(analogRead(MQ2_ANALOG_PIN)) / mq2.Ro, GAS_LPG);
   Serial.print("LPG:");
   Serial.print(value);
-  Serial.print("ppm\n");
+  Serial.print(" ppm\n");
   return value;
 }
 
@@ -167,7 +175,7 @@ int get_gas_MQ2() {
   } else {
     Serial.println(cMsg);
   }
-  return 0;
+  return bySensorVal;
 }
 
 float get_motion_HCSR501() {
@@ -178,12 +186,12 @@ float get_motion_HCSR501() {
     return 0;
   } else {
     // if the value read was high, there was motion
-    Serial.println("Motion!");
+    Serial.println("Motion Detected!");
     return 1;
   }
 }
 
-String sensorNameValueToString(String name, double value) {
+String to_string(String name, double value) {
   if (name == "temperature") {
     return "\"" + name + "\"" + " : " + String(value) + " ";
   } else {
@@ -191,6 +199,7 @@ String sensorNameValueToString(String name, double value) {
   }
 }
 
+//http://sandboxelectronics.com/?p=165
 /***************************** MQCalibration ****************************************
 Input:   mq_pin - analog channel
 Output:  Ro of the sensor
