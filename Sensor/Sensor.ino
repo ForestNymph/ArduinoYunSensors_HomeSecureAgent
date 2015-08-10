@@ -1,14 +1,16 @@
-#include<dht.h>
-#include<MQ2.h>
-#include<YunClient.h>
+#include <YunClient.h>
+#include <LiquidCrystal.h>
+#include <dht.h>
+#include <MQ2.h>
 
-#define DHT11_DIGITAL_PIN 4
+#define DHT11_DIGITAL_PIN 13
 #define LM35_ANALOG_PIN 1
 #define HCSR501_DIGITAL_PIN 7
 #define MQ2_ANALOG_PIN 2
-#define BILED1_DIGITAL_PIN 11
-#define BILED2_DIGITAL_PIN 12
+#define BILED1_DIGITAL_PIN 8
+#define BILED2_DIGITAL_PIN 9
 #define BUZZER_DIGITAL_PIN 10
+#define BACKLIGHT_DIGITAL_PIN
 
 dht DHT;
 MQ2 mq2;
@@ -31,12 +33,7 @@ String adress = "grudowska.pl:8080";
 boolean air_hazard = false;
 String type_hazard_sensor = "none";
 
-String humidity = "humidity";
-String temperature = "temperature";
-String carbon_monoxide = "carbon monoxide";
-String gas = "propan butan";
-String motion = "motion";
-String smoke = "smoke";
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 void setup() {
 
@@ -45,7 +42,11 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) ;
 
+  lcd.begin(16, 2);
+
   Serial.print("Connecting...");
+  lcd.print("Connecting...");
+
   if (client.connect(server_name, 80)) {
     Serial.println("Done!");
   } else {
@@ -53,6 +54,10 @@ void setup() {
     // Freeze on fail
     while (1);
   }
+
+  lcd.clear();
+  lcd.print("Calibrating...");
+
   Serial.print("Calibrating...\n");
   mq2.Ro = MQCalibration(MQ2_ANALOG_PIN);
   Serial.print("Calibration is done.\n");
@@ -60,6 +65,12 @@ void setup() {
   pinMode(BILED1_DIGITAL_PIN, OUTPUT);
   pinMode(BILED2_DIGITAL_PIN, OUTPUT);
   pinMode(BUZZER_DIGITAL_PIN, OUTPUT);
+
+  lcd.clear();
+  lcd.print("Ready.");
+  delay(2000);
+  lcd.noDisplay();
+  lcd.clear();
 }
 
 void loop() {
@@ -100,26 +111,30 @@ void set_air_hazard(String sensor_type, float current_value, float max_value) {
   if (current_value > max_value) {
     type_hazard_sensor = sensor_type;
     air_hazard = true;
+    set_text_display(sensor_type, current_value, true);
   } else {
     if (type_hazard_sensor == sensor_type) {
       type_hazard_sensor = "none";
       air_hazard = false;
+      set_text_display(sensor_type, current_value, false);
     }
   }
 }
 
-void playNote(char note, int duration) {
-  char names[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'C' };
-  int tones[] = { 1915, 1700, 1519, 1432, 1275, 1136, 1014, 956 };
-
-  // play the tone corresponding to the note name
-  for (int i = 0; i < 8; i++) {
-    if (names[i] == note) {
-      playTone(tones[i], duration);
-    }
+// Disply information about air hazard
+void set_text_display(String sensor_name, float value, bool is_hazard) {
+  if (is_hazard) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(sensor_name);
+    lcd.setCursor(0, 1);
+    lcd.print(value);
+    lcd.display();
+  } else {
+    lcd.noDisplay();
+    lcd.clear();
   }
 }
-///////////////////////////////////////////////////
 
 String create_http_packet() {
   String payload = get_payload();
@@ -176,7 +191,7 @@ float get_humidity_DHT11() {
   }
 
   float hum = DHT.humidity;
-  set_air_hazard("humidity", hum, 70);
+  set_air_hazard("Humidity", hum, 70);
   Serial.print("HUMIDITY = ");
   Serial.print(hum, 1);
   Serial.print("%\t");
@@ -191,7 +206,7 @@ float get_temperature_LM35() {
   //convert the analog data to Celcius temperature
   //float temp = (5.0 * analogRead(LM35_ANALOG_PIN) * 100.0) / 1024.0;//temp * 0.48828125;
   float temp = DHT.temperature;
-  set_air_hazard("temperature", temp, 35);
+  set_air_hazard("Temperature", temp, 35);
   // Serial.print("TEMPRATURE = ");
   // Serial.print(temp);
   // Serial.print("*C");
@@ -205,7 +220,7 @@ float get_carbonmonoxide_MQ9() {
   Serial.print("Carbon monoxide:");
   Serial.print(value);
   Serial.print(" ppm\n");
-  set_air_hazard("carbon monoxide", value, 60);
+  set_air_hazard("Carbon monoxide", value, 60);
   return value;
 }
 
@@ -214,7 +229,7 @@ float get_gasLPG_MQ2() {
   Serial.print("LPG:");
   Serial.print(value);
   Serial.print(" ppm\n");
-  set_air_hazard("propan butan", value, 10);
+  set_air_hazard("Propan butan", value, 10);
   return value;
 }
 
@@ -223,7 +238,7 @@ float get_smoke_MQ2() {
   Serial.print("Smoke:");
   Serial.print(value);
   Serial.print(" ppm\n");
-  set_air_hazard("smoke", value, 10);
+  set_air_hazard("Smoke", value, 10);
   return value;
 }
 
@@ -235,7 +250,7 @@ int get_gas_MQ2() {
 
   // Display input value and mapped value
   sprintf(cMsg, "MQ-2 Sensor Value : %d (%d)", value, bySensorVal);
-  set_air_hazard("propan butan", value, 60);
+  set_air_hazard("Propan butan", value, 60);
   // Check for high value
   if (bySensorVal > 60) {
     Serial.print(cMsg);
@@ -251,12 +266,12 @@ float get_motion_HCSR501() {
   if (val == LOW) {
     // if the value read is low, there was no motion
     Serial.println("No motion");
-    set_air_hazard("motion", 0, 0);
+    set_air_hazard("Motion", 0, 0);
     return 0;
   } else {
     // if the value read was high, there was motion
     Serial.println("Motion Detected!");
-    set_air_hazard("motion", 1, 0);
+    set_air_hazard("Motion", 1, 0);
     return 1;
   }
 }
@@ -326,6 +341,19 @@ int length = 1; // the number of notes
 char notes[] = "a"; // a space represents a rest
 int beats[] = { 2 };
 int tempo = 300;
+
+
+void playNote(char note, int duration) {
+  char names[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'C' };
+  int tones[] = { 1915, 1700, 1519, 1432, 1275, 1136, 1014, 956 };
+
+  // play the tone corresponding to the note name
+  for (int i = 0; i < 8; i++) {
+    if (names[i] == note) {
+      playTone(tones[i], duration);
+    }
+  }
+}
 
 void start_buzzer() {
   for (int i = 0; i < length; i++) {
