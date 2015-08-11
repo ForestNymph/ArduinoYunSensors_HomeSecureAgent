@@ -48,16 +48,22 @@ void setup() {
   // Serial.print("Connecting...");
   lcd.print("Connecting...");
   lcd.setCursor(0, 1);
-  
-  if (client.connect(server_name, 80)) {
-    // Serial.println("Done!");
-    lcd.print("Done!");
-  } else {
-    // Serial.println("Fail");
-    lcd.print("Fail!");
-    // Freeze on fail
-    while (1);
+
+  // After restart Arduino we need to wait for
+  // wifi module and internet connection
+  bool no_wifi = true;
+  while (no_wifi) {
+    if (client.connect(server_name, 80)) {
+      // Serial.println("Done!");
+      lcd.print("Done!");
+      no_wifi = false;
+    } else {
+      // Serial.println("Fail");
+      // lcd.print("Fail!");
+      // Freeze on fail
+    }
   }
+
   delay(2000);
   lcd.clear();
   lcd.print("Calibrating...");
@@ -91,14 +97,14 @@ void loop() {
   // do nothing until the process finishes,
   // so you get the whole output:
   // while (process.running());
-  
-  // Read command output. runShellCommand()
+
+  // Read command output  process.runShellCommand()
   // while (process.available()) {
   //   String result = process.readString();
   //   Serial.println(result);
   // }
   set_color_bidiode();
-  
+
   if (air_hazard) {
     start_buzzer();
   } else {
@@ -135,7 +141,7 @@ void set_air_hazard(String sensor_type, float current_value, float max_value) {
   }
 }
 
-// Disply information about air hazard
+// Display information about air hazard
 void set_text_display(String sensor_name, float value, bool is_hazard) {
   if (is_hazard) {
     lcd.clear();
@@ -143,12 +149,12 @@ void set_text_display(String sensor_name, float value, bool is_hazard) {
     lcd.setCursor(0, 0);
     lcd.print(sensor_name);
     lcd.setCursor(0, 1);
-    if(sensor_name == "Motion") {
+    if (sensor_name == "Motion") {
       lcd.print("Watch your back!");
     } else {
       lcd.print(value);
     }
-  } 
+  }
 }
 
 String create_http_packet() {
@@ -191,9 +197,10 @@ String get_payload() {
 }
 
 float get_humidity_DHT11() {
-  Serial.print("DHT11\t");
 
-  int check = DHT.read11(DHT11_DIGITAL_PIN);
+  // Debug connection with sensor
+  // Serial.print("DHT11\t");
+  /* int check = DHT.read11(DHT11_DIGITAL_PIN);
   switch (check) {
     case DHTLIB_OK: Serial.print("OK\t");
       break;
@@ -203,16 +210,16 @@ float get_humidity_DHT11() {
       break;
     default: Serial.print("Unknown error\t");
       break;
-  }
+  } */
 
   float hum = DHT.humidity;
   set_air_hazard("Humidity", hum, 70);
-  Serial.print("HUMIDITY = ");
-  Serial.print(hum, 1);
-  Serial.print("%\t");
-  Serial.print("TEMPRATURE = ");
-  Serial.print(DHT.temperature, 1);
-  Serial.println("*C\t");
+  // Serial.print("HUMIDITY = ");
+  // Serial.print(hum, 1);
+  // Serial.print("%\t");
+  // Serial.print("TEMPRATURE = ");
+  // Serial.print(DHT.temperature, 1);
+  // Serial.println("*C\t");
 
   return hum;
 }
@@ -232,27 +239,30 @@ float get_temperature_LM35() {
 
 float get_carbonmonoxide_MQ9() {
   float value = mq2.MQGetGasPercentage(MQRead(analogRead(MQ2_ANALOG_PIN)) / mq2.Ro, GAS_CO);
-  Serial.print("Carbon monoxide:");
-  Serial.print(value);
-  Serial.print(" ppm\n");
+  // Debug
+  // Serial.print("Carbon monoxide:");
+  // Serial.print(value);
+  // Serial.print(" ppm\n");
   set_air_hazard("Carbon monoxide", value, 60);
   return value;
 }
 
 float get_gasLPG_MQ2() {
   float value = mq2.MQGetGasPercentage(MQRead(analogRead(MQ2_ANALOG_PIN)) / mq2.Ro, GAS_LPG);
-  Serial.print("LPG:");
-  Serial.print(value);
-  Serial.print(" ppm\n");
+  // Debug
+  // Serial.print("LPG:");
+  // Serial.print(value);
+  // Serial.print(" ppm\n");
   set_air_hazard("Propan butan", value, 10);
   return value;
 }
 
 float get_smoke_MQ2() {
   float value = mq2.MQGetGasPercentage(MQRead(MQ2_ANALOG_PIN) / mq2.Ro, GAS_SMOKE);
-  Serial.print("Smoke:");
-  Serial.print(value);
-  Serial.print(" ppm\n");
+  // Debug
+  // Serial.print("Smoke:");
+  // Serial.print(value);
+  // Serial.print(" ppm\n");
   set_air_hazard("Smoke", value, 10);
   return value;
 }
@@ -261,17 +271,19 @@ int get_gas_MQ2() {
   // Read input value and map it from 0 to 100
   int value = analogRead(MQ2_ANALOG_PIN);
   byte bySensorVal = map(value, 0, 1023, 0, 100);
-  char cMsg[124];
 
+  // Debug
+  // char cMsg[124];
   // Display input value and mapped value
-  sprintf(cMsg, "MQ-2 Sensor Value : %d (%d)", value, bySensorVal);
-  set_air_hazard("Propan butan", value, 60);
+  // sprintf(cMsg, "MQ-2 Sensor Value : %d (%d)", value, bySensorVal);
+
   // Check for high value
   if (bySensorVal > 60) {
-    Serial.print(cMsg);
-    Serial.println(F(" *** DISTURBANCE IN THE FORCE! ***"));
+    set_air_hazard("Gas", value, 60);
+    // Serial.print(cMsg);
+    // Serial.println(F(" *** DISTURBANCE IN THE FORCE! ***"));
   } else {
-    Serial.println(cMsg);
+    // Serial.println(cMsg);
   }
   return bySensorVal;
 }
@@ -280,12 +292,12 @@ float get_motion_HCSR501() {
   float val = digitalRead(HCSR501_DIGITAL_PIN);
   if (val == LOW) {
     // if the value read is low, there was no motion
-    Serial.println("No motion");
+    // Serial.println("No motion");
     set_air_hazard("Motion", 0, 0);
     return 0;
   } else {
     // if the value read was high, there was motion
-    Serial.println("Motion Detected!");
+    // Serial.println("Motion Detected!");
     set_air_hazard("Motion", 1, 0);
     return 1;
   }
@@ -390,3 +402,4 @@ void playTone(int tone, int duration) {
     delayMicroseconds(tone);
   }
 }
+
