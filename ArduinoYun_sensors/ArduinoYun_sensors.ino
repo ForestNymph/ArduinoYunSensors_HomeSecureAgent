@@ -31,10 +31,16 @@ String adress = "grudowska.pl:8080";
 
 boolean air_hazard = false;
 String type_hazard_sensor = "none";
+bool no_wifi = true;
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 void setup() {
+  
+  pinMode(BILED1_DIGITAL_PIN, OUTPUT);
+  pinMode(BILED2_DIGITAL_PIN, OUTPUT);
+  pinMode(BUZZER_DIGITAL_PIN, OUTPUT);
+  
   //start Bridge
   Bridge.begin();
 
@@ -42,6 +48,9 @@ void setup() {
   // Wait for a serial connection before going into loop()
   // Serial.begin(9600);
   // while (!Serial) ;
+  // Red diod while initialization
+  digitalWrite(BILED2_DIGITAL_PIN, HIGH);
+  digitalWrite(BILED1_DIGITAL_PIN, LOW);
 
   lcd.begin(16, 2);
 
@@ -51,16 +60,21 @@ void setup() {
 
   // After restart Arduino we need to wait for
   // wifi module and internet connection
-  bool no_wifi = true;
-  while (no_wifi) {
+  // After 60000 milisec.(60 sec) when we don't have
+  // internet or server connection 
+  // start Arduino anyway to be
+  // independently functioning device
+  unsigned long time = 0;
+  while (no_wifi && time < 60000) {
     if (client.connect(server_name, 80)) {
       // Serial.println("Done!");
       lcd.print("Done!");
       no_wifi = false;
+      break;
     } else {
+      time = millis();
       // Serial.println("Fail");
       // lcd.print("Fail!");
-      // Freeze on fail
     }
   }
 
@@ -71,10 +85,6 @@ void setup() {
   // Serial.print("Calibrating...\n");
   mq2.Ro = MQCalibration(MQ2_ANALOG_PIN);
   // Serial.print("Calibration is done.\n");
-
-  pinMode(BILED1_DIGITAL_PIN, OUTPUT);
-  pinMode(BILED2_DIGITAL_PIN, OUTPUT);
-  pinMode(BUZZER_DIGITAL_PIN, OUTPUT);
 
   lcd.clear();
   lcd.print("Ready!");
@@ -111,6 +121,11 @@ void loop() {
     lcd.clear();
     lcd.display();
     lcd.print("Everything is ok");
+    // if there is no internet/server connection
+    if(no_wifi) {
+      lcd.setCursor(0,1);
+      lcd.print("Connection error");
+    }
   }
 }
 
@@ -200,18 +215,25 @@ float get_humidity_DHT11() {
 
   // Debug connection with sensor
   // Serial.print("DHT11\t");
-  /* int check = DHT.read11(DHT11_DIGITAL_PIN);
-  switch (check) {
-    case DHTLIB_OK: Serial.print("OK\t");
+  // Initialize sensor
+  int check = DHT.read11(DHT11_DIGITAL_PIN);
+  /* switch (check) {
+    lcd.clear();
+    case DHTLIB_OK: // Serial.print("OK\t");
+          lcd.print("OK");
       break;
-    case DHTLIB_ERROR_CHECKSUM: Serial.print("Checksum error\t");
+    case DHTLIB_ERROR_CHECKSUM: // Serial.print("Checksum error\t");
+          lcd.print("Checksum error");
       break;
-    case DHTLIB_ERROR_TIMEOUT: Serial.print("Time out error\t");
+    case DHTLIB_ERROR_TIMEOUT: // Serial.print("Time out error\t");
+          lcd.print("Time out error");
       break;
-    default: Serial.print("Unknown error\t");
+    default: // Serial.print("Unknown error\t");
+          lcd.print("Time out error");
       break;
-  } */
-
+  }
+  delay(5000);
+  */
   float hum = DHT.humidity;
   set_air_hazard("Humidity", hum, 70);
   // Serial.print("HUMIDITY = ");
@@ -227,6 +249,8 @@ float get_humidity_DHT11() {
 float get_temperature_LM35() {
   //convert the analog data to Celcius temperature
   //float temp = (5.0 * analogRead(LM35_ANALOG_PIN) * 100.0) / 1024.0;//temp * 0.48828125;
+  // Initialize sensor
+  int check = DHT.read11(DHT11_DIGITAL_PIN);
   float temp = DHT.temperature;
   set_air_hazard("Temperature", temp, 35);
   // Serial.print("TEMPRATURE = ");
