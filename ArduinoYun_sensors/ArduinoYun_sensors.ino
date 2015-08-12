@@ -60,19 +60,28 @@ void setup() {
 
   // After restart Arduino we need to wait for
   // wifi module and internet connection
-  // After 60000 milisec.(60 sec) when we don't have
+  // After 90000 milisec.(90 sec) when we don't have
   // internet or server connection 
   // start Arduino anyway to be
   // independently functioning device
-  unsigned long time = 0;
-  while (no_wifi && time < 60000) {
+  unsigned long time_sec = 0;
+  while (no_wifi && time_sec < 90) {
     if (client.connect(server_name, 80)) {
       // Serial.println("Done!");
+      lcd.setCursor(0, 1);
+      // Clear second line
+      lcd.print("                ");
+      lcd.setCursor(0, 1);
       lcd.print("Done!");
       no_wifi = false;
       break;
     } else {
-      time = millis();
+      time_sec = millis() / 1000;
+      lcd.setCursor(0, 1);
+      lcd.print(90 - time_sec);
+      lcd.setCursor(3, 1);
+      lcd.print("sec. retrying");
+      delay(1000);
       // Serial.println("Fail");
       // lcd.print("Fail!");
     }
