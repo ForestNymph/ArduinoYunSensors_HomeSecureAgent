@@ -28,6 +28,8 @@ String start_payload = "'{\"sensorList\":[{";
 String payload = "";
 String end_payload = "}]}' ";
 String adress = "grudowska.pl:8080";
+// HCSR501 calibration time in sec.
+int calibration_time = 15;
 
 boolean air_hazard = false;
 String type_hazard_sensor = "none";
@@ -36,11 +38,11 @@ bool no_wifi = true;
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 void setup() {
-  
+
   pinMode(BILED1_DIGITAL_PIN, OUTPUT);
   pinMode(BILED2_DIGITAL_PIN, OUTPUT);
   pinMode(BUZZER_DIGITAL_PIN, OUTPUT);
-  
+
   //start Bridge
   Bridge.begin();
 
@@ -48,12 +50,18 @@ void setup() {
   // Wait for a serial connection before going into loop()
   // Serial.begin(9600);
   // while (!Serial) ;
-  // Red diod while initialization
+  // Red color diode while initialization
   digitalWrite(BILED2_DIGITAL_PIN, HIGH);
   digitalWrite(BILED1_DIGITAL_PIN, LOW);
 
   lcd.begin(16, 2);
 
+  connect_server("grudowska.pl", 80);
+  calibrate_MQ2();
+  calibrate_HCSR501();
+}
+
+void connect_server(String name_server, int port) {
   // Serial.print("Connecting...");
   lcd.print("Connecting...");
   lcd.setCursor(0, 1);
@@ -61,12 +69,12 @@ void setup() {
   // After restart Arduino we need to wait for
   // wifi module and internet connection
   // After 90000 milisec.(90 sec) when we don't have
-  // internet or server connection 
+  // internet or server connection
   // start Arduino anyway to be
   // independently functioning device
   unsigned long time_sec = 0;
   while (no_wifi && time_sec < 90) {
-    if (client.connect(server_name, 80)) {
+    if (client.connect(server_name, port)) {
       // Serial.println("Done!");
       lcd.setCursor(0, 1);
       // Clear second line
@@ -86,20 +94,35 @@ void setup() {
       // lcd.print("Fail!");
     }
   }
-
-  delay(2000);
   lcd.clear();
+  delay(500);
+}
+
+void calibrate_MQ2() {
   lcd.print("Calibrating...");
 
   // Serial.print("Calibrating...\n");
   mq2.Ro = MQCalibration(MQ2_ANALOG_PIN);
   // Serial.print("Calibration is done.\n");
 
-  lcd.clear();
-  lcd.print("Ready!");
+  lcd.setCursor(0, 1);
+  lcd.print("MQ2 Ready!");
   delay(2000);
   lcd.clear();
-  lcd.noDisplay();
+}
+
+// Give the sensor some time to calibrate
+void calibrate_HCSR501() {
+  lcd.print("Calibrating...");
+  pinMode(HCSR501_DIGITAL_PIN, INPUT);
+  digitalWrite(HCSR501_DIGITAL_PIN, LOW);
+  for (int i = 0; i < calibration_time; i++) {
+    delay(1000);
+  }
+  lcd.setCursor(0, 1);
+  lcd.print("HCSR501 Ready!");
+  delay(2000);
+  lcd.clear();
 }
 
 void loop() {
@@ -131,8 +154,8 @@ void loop() {
     lcd.display();
     lcd.print("Everything is ok");
     // if there is no internet/server connection
-    if(no_wifi) {
-      lcd.setCursor(0,1);
+    if (no_wifi) {
+      lcd.setCursor(0, 1);
       lcd.print("Connection error");
     }
   }
@@ -256,12 +279,16 @@ float get_humidity_DHT11() {
 }
 
 float get_temperature_LM35() {
-  //convert the analog data to Celcius temperature
-  //float temp = (5.0 * analogRead(LM35_ANALOG_PIN) * 100.0) / 1024.0;//temp * 0.48828125;
+  // convert the analog data to Celcius temperature
+  analogRead(LM35_ANALOG_PIN);
+  delay(10);
+  float temp = (analogRead(LM35_ANALOG_PIN) / 1024.0 * 5000.0) / 10.0;
+  delay(10);
+
   // Initialize sensor
-  int check = DHT.read11(DHT11_DIGITAL_PIN);
-  float temp = DHT.temperature;
-  set_air_hazard("Temperature", temp, 35);
+  // int check = DHT.read11(DHT11_DIGITAL_PIN);
+  // float temp = DHT.temperature;
+  // set_air_hazard("Temperature", temp, 35);
   // Serial.print("TEMPRATURE = ");
   // Serial.print(temp);
   // Serial.print("*C");
