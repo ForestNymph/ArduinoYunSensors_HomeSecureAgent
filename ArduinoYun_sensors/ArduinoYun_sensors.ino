@@ -28,8 +28,10 @@ String start_payload = "'{\"sensorList\":[{";
 String payload = "";
 String end_payload = "}]}' ";
 String adress = "grudowska.pl:8080";
+
 // HCSR501 calibration time in sec.
-int calibration_time = 15;
+int calibration_time_HCSR501 = 15;
+int calibration_temperature = 4;
 
 boolean air_hazard = false;
 String type_hazard_sensor = "none";
@@ -116,7 +118,7 @@ void calibrate_HCSR501() {
   lcd.print("Calibrating...");
   pinMode(HCSR501_DIGITAL_PIN, INPUT);
   digitalWrite(HCSR501_DIGITAL_PIN, LOW);
-  for (int i = 0; i < calibration_time; i++) {
+  for (int i = 0; i < calibration_time_HCSR501; i++) {
     delay(1000);
   }
   lcd.setCursor(0, 1);
@@ -282,13 +284,14 @@ float get_temperature_LM35() {
   // convert the analog data to Celcius temperature
   analogRead(LM35_ANALOG_PIN);
   delay(10);
-  float temp = (analogRead(LM35_ANALOG_PIN) / 1024.0 * 5000.0) / 10.0;
+  float temp = (analogRead(LM35_ANALOG_PIN) / 1024.0 * 4280.0) / 10.0;
   delay(10);
+  temp = temp - calibration_temperature;
 
   // Initialize sensor
   // int check = DHT.read11(DHT11_DIGITAL_PIN);
   // float temp = DHT.temperature;
-  // set_air_hazard("Temperature", temp, 35);
+  set_air_hazard("Temperature", temp, 36);
   // Serial.print("TEMPRATURE = ");
   // Serial.print(temp);
   // Serial.print("*C");
