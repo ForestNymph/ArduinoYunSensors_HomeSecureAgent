@@ -282,15 +282,15 @@ float get_humidity_DHT11() {
 
 float get_temperature_LM35() {
   // convert the analog data to Celcius temperature
-  analogRead(LM35_ANALOG_PIN);
-  delay(10);
-  float temp = (analogRead(LM35_ANALOG_PIN) / 1024.0 * 4280.0) / 10.0;
-  delay(10);
-  temp = temp - calibration_temperature;
+  // analogRead(LM35_ANALOG_PIN);
+  // delay(10);
+  // float temp = (analogRead(LM35_ANALOG_PIN) / 1024.0 * 4280.0) / 10.0;
+  // delay(10);
+  // temp = temp - calibration_temperature;
 
   // Initialize sensor
-  // int check = DHT.read11(DHT11_DIGITAL_PIN);
-  // float temp = DHT.temperature;
+  int check = DHT.read11(DHT11_DIGITAL_PIN);
+  float temp = DHT.temperature;
   set_air_hazard("Temperature", temp, 36);
   // Serial.print("TEMPRATURE = ");
   // Serial.print(temp);
@@ -465,4 +465,5 @@ void playTone(int tone, int duration) {
     delayMicroseconds(tone);
   }
 }
+
 
